@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYMBIOTIC - SUS Tool</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #0ea5e9;
+            --bg: #0b0f1a;
+            --card-bg: rgba(30, 41, 59, 0.5);
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.08);
+            --glass: rgba(255, 255, 255, 0.02);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; }
+
+        header {
+            width: 100%; padding: 0.8rem 2rem; display: flex; justify-content: space-between; align-items: center;
+            background: #e0f2fe; border-bottom: 1px solid #bae6fd; position: sticky; top: 0; z-index: 100;
+        }
+        .logo-container img { height: 38px; }
+        .admin-login-btn { background: #0369a1; color: white; border: none; padding: 0.5rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
+
+        main { max-width: 700px; margin: 2rem auto; padding: 0 1rem; }
+
+        .view { display: none; animation: fadeIn 0.3s ease; }
+        .view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Tarjeta de Referencia - Más pequeña y estética */
+        .target-card {
+            background: var(--card-bg); border: 1px solid var(--border); padding: 1.2rem; border-radius: 1rem;
+            margin-bottom: 2rem; display: flex; align-items: center; gap: 1.2rem; backdrop-filter: blur(10px);
+        }
+        .target-card img { width: 120px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
+        .target-info { flex: 1; }
+        .target-info h2 { font-size: 1rem; color: #7dd3fc; margin-bottom: 0.2rem; }
+        .target-info p { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+        .target-link { font-size: 0.75rem; color: #38bdf8; text-decoration: none; font-weight: 600; }
+
+        .intro { text-align: center; margin-bottom: 2rem; }
+        .intro h1 { font-size: 1.8rem; margin-bottom: 0.5rem; letter-spacing: -0.5px; }
+        .intro p { font-size: 0.9rem; color: var(--text-muted); }
+
+        .question-card { background: var(--card-bg); border: 1px solid var(--border); padding: 1.5rem; border-radius: 1rem; margin-bottom: 1.2rem; }
+        .question-text { font-size: 1rem; font-weight: 500; margin-bottom: 1.2rem; display: block; }
+
+        .likert-scale { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 0.5rem; }
+        .likert-option { flex: 1; text-align: center; cursor: pointer; }
+        .likert-option input { display: none; }
+        .likert-circle {
+            width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--border);
+            display: flex; justify-content: center; align-items: center; margin: 0 auto 0.4rem;
+            color: var(--text-muted); font-weight: 700; font-size: 0.9rem; transition: all 0.2s;
+        }
+        .likert-option input:checked + .likert-circle { background: #0ea5e9; border-color: #0ea5e9; color: white; }
+        .likert-val-label { font-size: 0.65rem; color: var(--text-muted); display: block; line-height: 1.1; }
+
+        .submit-container { text-align: center; margin-top: 3rem; padding-bottom: 4rem; }
+        .btn-primary { background: #0ea5e9; color: white; border: none; padding: 1rem 2.5rem; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 1rem; }
+
+        /* Admin Styles */
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card { background: var(--glass); padding: 1rem; border-radius: 0.8rem; border: 1px solid var(--border); text-align: center; }
+        .stat-value { font-size: 1.5rem; font-weight: 800; color: #7dd3fc; display: block; }
+        .stat-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; }
+        
+        table { width: 100%; border-collapse: collapse; background: var(--glass); border-radius: 0.8rem; overflow: hidden; font-size: 0.8rem; }
+        th, td { padding: 0.8rem; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--text-muted); background: rgba(255,255,255,0.03); }
+
+        .badge { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.65rem; font-weight: 800; }
+        .badge-excelente { background: #064e3b; color: #6ee7b7; }
+        .badge-muybueno { background: #065f46; color: #34d399; }
+        .badge-bueno { background: #1e3a8a; color: #93c5fd; }
+        .badge-marginal { background: #78350f; color: #fcd34d; }
+        .badge-inaceptable { background: #7f1d1d; color: #fca5a5; }
+
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
+        .modal-content { background: #1e293b; padding: 2rem; border-radius: 1.2rem; width: 90%; max-width: 340px; border: 1px solid var(--border); }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo-container"><img src="https://jolly-hill-015b13e0f.1.azurestaticapps.net/images/SYMBIOTIC%20(1).svg" alt="SYMBIOTIC"></div>
+    <div>
+        <button class="admin-login-btn" id="login-btn" onclick="openLoginModal()">Admin Login</button>
+        <button class="admin-login-btn" id="logout-btn" onclick="logout()" style="display:none; background: #ef4444;">Salir</button>
+    </div>
+</header>
+
+<main>
+    <div id="survey-view" class="view active">
+        <div class="target-card">
+            <img src="Captura de pantalla 2026-05-06 161713.png" alt="Panel">
+            <div class="target-info">
+                <h2>Análisis Vecindades</h2>
+                <p>Evaluación de usabilidad del panel analítico.</p>
+                <a href="https://vecindadess.azurewebsites.net/" target="_blank" class="target-link">Abrir Panel →</a>
+            </div>
+        </div>
+
+        <div class="intro">
+            <h1>Cuestionario SUS</h1>
+            <p>Tu opinión nos ayuda a mejorar la experiencia.</p>
+        </div>
+
+        <form id="sus-form">
+            <div id="questions-list"></div>
+            <div class="submit-container"><button type="submit" class="btn-primary" id="submit-btn">Enviar</button></div>
+        </form>
+    </div>
+
+    <div id="success-view" class="view" style="text-align: center; padding: 4rem 0;">
+        <div style="font-size: 4rem; margin-bottom: 1rem;">✨</div>
+        <h2>¡Enviado!</h2>
+        <p style="color: var(--text-muted);">Tus respuestas se han guardado con éxito.</p>
+        <button class="btn-primary" style="margin-top: 2rem;" onclick="location.reload()">Volver</button>
+    </div>
+
+    <div id="admin-view" class="view">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2>Panel Admin</h2>
+            <button class="admin-login-btn" onclick="showSurvey()" style="background: rgba(255,255,255,0.1);">Vista Usuario</button>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-card"><span class="stat-value" id="avg-score">0.0</span><span class="stat-label">Promedio</span></div>
+            <div class="stat-card"><span class="stat-value" id="total-resp">0</span><span class="stat-label">Total</span></div>
+            <div class="stat-card"><span class="stat-value" id="max-score">0</span><span class="stat-label">Máximo</span></div>
+        </div>
+        <div style="background: var(--glass); padding: 1.2rem; border-radius: 1rem; margin-bottom: 1.5rem; border: 1px solid var(--border);">
+            <canvas id="metricsChart" style="max-height: 200px;"></canvas>
+        </div>
+        <table>
+            <thead><tr><th>Fecha</th><th>Score</th><th>Calificación</th></tr></thead>
+            <tbody id="admin-table"></tbody>
+        </table>
+    </div>
+</main>
+
+<div id="login-modal" class="modal">
+    <div class="modal-content">
+        <h2 style="text-align: center; margin-bottom: 1.5rem; font-size: 1.2rem;">Admin Access</h2>
+        <div style="margin-bottom: 1rem;">
+            <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:0.3rem;">Usuario</label>
+            <input type="text" id="email" style="width:100%; padding:0.7rem; border-radius:6px; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border);">
+        </div>
+        <div style="margin-bottom: 1.5rem;">
+            <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:0.3rem;">Password</label>
+            <input type="password" id="pass" style="width:100%; padding:0.7rem; border-radius:6px; background:rgba(0,0,0,0.2); color:white; border:1px solid var(--border);">
+        </div>
+        <button class="btn-primary" style="width:100%;" onclick="handleLogin()">Entrar</button>
+        <button style="width:100%; margin-top:1rem; background:transparent; color:var(--text-muted); border:none; font-size:0.8rem; cursor:pointer;" onclick="closeLoginModal()">Cancelar</button>
+    </div>
+</div>
+
+<script>
+    const SUPABASE_URL = 'TU_SUPABASE_URL';
+    const SUPABASE_ANON_KEY = 'TU_SUPABASE_ANON_KEY';
+    
+    let sb = null;
+    try {
+        const { createClient } = supabase;
+        sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch(e) {}
+
+    const labels = ["Muy en desacuerdo", "En desacuerdo", "Neutral", "De acuerdo", "Muy de acuerdo"];
+    const questions = [
+        "Creo que me gustaría usar este sistema frecuentemente",
+        "Encontré el sistema innecesariamente complejo",
+        "Pensé que el sistema era fácil de usar",
+        "Creo que necesitaría ayuda de una persona técnica para poder usar este sistema",
+        "Encontré que las diversas funciones del sistema estaban bien integradas",
+        "Pensé que había demasiada inconsistencia en el sistema",
+        "Imagino que la mayoría de las personas aprenderían a usar este sistema muy rápidamente",
+        "Encontré el sistema muy complicado de usar",
+        "Me sentí muy seguro/a usando el sistema",
+        "Necesité aprender muchas cosas antes de poder empezar a usar este sistema"
+    ];
+
+    const list = document.getElementById('questions-list');
+    questions.forEach((q, i) => {
+        const n = i + 1;
+        list.innerHTML += `
+            <div class="question-card">
+                <span class="question-text">${n}. ${q}</span>
+                <div class="likert-scale">
+                    ${[1,2,3,4,5].map(v => `<label class="likert-option"><input type="radio" name="q${n}" value="${v}" required><div class="likert-circle">${v}</div><span class="likert-val-label">${labels[v-1]}</span></label>`).join('')}
+                </div>
+            </div>
+        `;
+    });
+
+    document.getElementById('sus-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const data = {};
+        let rawSum = 0;
+        for(let i=1; i<=10; i++){
+            const v = parseInt(fd.get('q'+i));
+            data['q'+i] = v;
+            if(i % 2 !== 0) rawSum += (v - 1);
+            else rawSum += (5 - v);
+        }
+        const score = rawSum * 2.5;
+        const interp = getInterp(score);
+        if(!sb || SUPABASE_URL === 'TU_SUPABASE_URL') { alert(`Prueba: ${score} (${interp}). Conecta Supabase para guardar.`); showView('success-view'); return; }
+        try {
+            document.getElementById('submit-btn').disabled = true;
+            await sb.from('sus_responses').insert([{...data, final_score: score, interpretation: interp}]);
+            showView('success-view');
+        } catch(err) { alert(err.message); }
+        finally { document.getElementById('submit-btn').disabled = false; }
+    };
+
+    function getInterp(s) {
+        if(s >= 85) return "Excelente"; if(s >= 80) return "Muy bueno"; if(s >= 68) return "Bueno"; if(s >= 51) return "Marginal"; return "Inaceptable";
+    }
+
+    function showView(id) { document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById(id).classList.add('active'); window.scrollTo(0,0); }
+    function openLoginModal() { document.getElementById('login-modal').style.display = 'flex'; }
+    function closeLoginModal() { document.getElementById('login-modal').style.display = 'none'; }
+    function showSurvey() { showView('survey-view'); }
+
+    async function handleLogin() {
+        const u = document.getElementById('email').value;
+        const p = document.getElementById('pass').value;
+        // CREDENCIALES DE PRUEBA: user / user
+        if(u === 'user' && p === 'user') {
+            closeLoginModal();
+            document.getElementById('login-btn').style.display = 'none';
+            document.getElementById('logout-btn').style.display = 'block';
+            showView('admin-view');
+            if(sb && SUPABASE_URL !== 'TU_SUPABASE_URL') loadAdminData();
+            else renderChart({Excelente:5, Bueno:10, Marginal:3}); // Datos de ejemplo
+            return;
+        }
+        // Login real con Supabase si está configurado
+        if(sb) {
+            const { error } = await sb.auth.signInWithPassword({ email: u, password: p });
+            if(error) alert("Credenciales incorrectas (Prueba con user/user)");
+            else { closeLoginModal(); checkAuth(); }
+        } else {
+            alert("Usa 'user' como usuario y contraseña.");
+        }
+    }
+
+    async function logout() { if(sb) await sb.auth.signOut(); document.getElementById('login-btn').style.display = 'block'; document.getElementById('logout-btn').style.display = 'none'; showSurvey(); }
+
+    async function loadAdminData() {
+        const { data, error } = await sb.from('sus_responses').select('*').order('created_at', {ascending: false});
+        if(error) return;
+        const table = document.getElementById('admin-table'); table.innerHTML = '';
+        let sum = 0, max = 0;
+        const counts = {Excelente:0, "Muy bueno":0, Bueno:0, Marginal:0, Inaceptable:0};
+        data.forEach(r => {
+            sum += r.final_score; if(r.final_score > max) max = r.final_score; counts[r.interpretation]++;
+            table.innerHTML += `<tr><td>${new Date(r.created_at).toLocaleDateString()}</td><td><strong>${r.final_score}</strong></td><td><span class="badge badge-${r.interpretation.toLowerCase().replace(' ', '')}">${r.interpretation}</span></td></tr>`;
+        });
+        document.getElementById('avg-score').innerText = data.length ? (sum/data.length).toFixed(1) : '0.0';
+        document.getElementById('total-resp').innerText = data.length;
+        document.getElementById('max-score').innerText = max;
+        renderChart(counts);
+    }
+
+    let chart = null;
+    function renderChart(c) {
+        const ctx = document.getElementById('metricsChart').getContext('2d');
+        if(chart) chart.destroy();
+        chart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: Object.keys(c), datasets: [{ data: Object.values(c), backgroundColor: ['#059669', '#10b981', '#3b82f6', '#f59e0b', '#ef4444'], borderRadius: 6 }] },
+            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } } } }
+        });
+    }
+</script>
+</body>
+</html>
