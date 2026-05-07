@@ -151,7 +151,7 @@
             <div class="stat-card"><span class="stat-value" id="max-score">0</span><span class="stat-label">Máximo</span></div>
         </div>
         <div style="background: var(--glass); padding: 1.2rem; border-radius: 1rem; margin-bottom: 1.5rem; border: 1px solid var(--border);">
-            <canvas id="metricsChart" style="max-height: 200px;"></canvas>
+            <canvas id="mainChart" style="max-height: 200px;"></canvas>
         </div>
         <table>
             <thead><tr><th>Fecha</th><th>Score</th><th>Grado</th><th>Acción</th></tr></thead>
@@ -210,12 +210,25 @@
     document.getElementById('sus-form').onsubmit = async (e) => {
         e.preventDefault();
         const fd = new FormData(e.target);
-        const data = {}; let rawSum = 0;
+        const data = {}; 
+        let rawSum = 0;
+        let missing = false;
+
         for(let i=1; i<=10; i++){
-            const v = parseInt(fd.get('q'+i)); data['q'+i] = v;
-            if(i % 2 !== 0) rawSum += (v - 1); else rawSum += (5 - v);
+            const v = fd.get('q'+i);
+            if(!v) { missing = true; break; }
+            const val = parseInt(v);
+            data['q'+i] = val;
+            if(i % 2 !== 0) rawSum += (val - 1); else rawSum += (5 - val);
         }
-        const score = rawSum * 2.5; const interp = getInterp(score);
+
+        if(missing) {
+            notify("⚠️ Por favor, responde todas las preguntas antes de enviar.", "error");
+            return;
+        }
+
+        const score = rawSum * 2.5; 
+        const interp = getInterp(score);
         try {
             document.getElementById('submit-btn').disabled = true;
             const { error } = await sb.from('sus_responses').insert([{...data, final_score: score, interpretation: interp}]);
