@@ -102,6 +102,15 @@
 
         .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
         .modal-content { background: #1e293b; padding: 2rem; border-radius: 1.2rem; width: 90%; max-width: 340px; border: 1px solid var(--border); }
+        
+        .details-modal-content { max-width: 500px; max-height: 80vh; overflow-y: auto; }
+        .details-list { display: flex; flex-direction: column; gap: 0.8rem; margin-top: 1.5rem; }
+        .details-item { background: rgba(255,255,255,0.03); padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+        .details-q-text { font-size: 0.85rem; color: var(--text-muted); flex: 1; }
+        .details-q-val { background: var(--primary); color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
+        
+        .view-btn { background: rgba(14, 165, 233, 0.1); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.2); padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; margin-right: 0.5rem; }
+        .view-btn:hover { background: #0ea5e9; color: white; }
     </style>
 </head>
 <body>
@@ -173,6 +182,15 @@
         </div>
         <button class="btn-primary" style="width:100%;" onclick="handleLogin()">Entrar</button>
         <button style="width:100%; margin-top:1rem; background:transparent; color:var(--text-muted); border:none; font-size:0.8rem; cursor:pointer;" onclick="closeLoginModal()">Cancelar</button>
+    </div>
+</div>
+
+<div id="details-modal" class="modal">
+    <div class="modal-content details-modal-content">
+        <h2 style="text-align: center; margin-bottom: 0.5rem; font-size: 1.2rem;">Detalles de Respuesta</h2>
+        <p id="details-meta" style="text-align: center; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.5rem;"></p>
+        <div id="details-list" class="details-list"></div>
+        <button class="btn-primary" style="width:100%; margin-top:2rem;" onclick="closeDetailsModal()">Cerrar</button>
     </div>
 </div>
 
@@ -256,19 +274,53 @@
 
     async function logout() { await sb.auth.signOut(); document.getElementById('login-btn').style.display = 'block'; document.getElementById('logout-btn').style.display = 'none'; showSurvey(); }
 
+    let allResponses = [];
     async function loadAdminData() {
         const { data, error } = await sb.from('sus_responses').select('*').order('created_at', {ascending: false});
         if(error) { notify("Error al cargar datos", "error"); return; }
+        allResponses = data;
         const table = document.getElementById('admin-table'); table.innerHTML = '';
         let sum = 0, max = 0; const counts = {Excelente:0, "Muy bueno":0, Bueno:0, Marginal:0, Inaceptable:0};
         data.forEach(r => {
             sum += r.final_score; if(r.final_score > max) max = r.final_score; counts[r.interpretation]++;
-            table.innerHTML += `<tr><td>${new Date(r.created_at).toLocaleDateString()}</td><td><strong>${r.final_score}</strong></td><td><span class="badge badge-${r.interpretation.toLowerCase().replace(' ', '')}">${r.interpretation}</span></td><td><button class="delete-btn" onclick="deleteRow('${r.id}')">Borrar</button></td></tr>`;
+            table.innerHTML += `<tr>
+                <td>${new Date(r.created_at).toLocaleDateString()}</td>
+                <td><strong>${r.final_score}</strong></td>
+                <td><span class="badge badge-${r.interpretation.toLowerCase().replace(' ', '')}">${r.interpretation}</span></td>
+                <td>
+                    <button class="view-btn" onclick="showDetails('${r.id}')">Ver</button>
+                    <button class="delete-btn" onclick="deleteRow('${r.id}')">Borrar</button>
+                </td>
+            </tr>`;
         });
         document.getElementById('avg-score').innerText = data.length ? (sum/data.length).toFixed(1) : '0.0';
         document.getElementById('total-resp').innerText = data.length; document.getElementById('max-score').innerText = max;
         renderChart(counts);
     }
+
+    function showDetails(id) {
+        const res = allResponses.find(r => r.id === id);
+        if(!res) return;
+        
+        const meta = document.getElementById('details-meta');
+        meta.innerHTML = `Fecha: ${new Date(res.created_at).toLocaleString()}<br>Score: <strong>${res.final_score}</strong> (${res.interpretation})`;
+        
+        const list = document.getElementById('details-list');
+        list.innerHTML = '';
+        questions.forEach((q, i) => {
+            const val = res['q' + (i+1)];
+            list.innerHTML += `
+                <div class="details-item">
+                    <span class="details-q-text">${i+1}. ${q}</span>
+                    <span class="details-q-val">${val}</span>
+                </div>
+            `;
+        });
+        
+        document.getElementById('details-modal').style.display = 'flex';
+    }
+
+    function closeDetailsModal() { document.getElementById('details-modal').style.display = 'none'; }
 
     async function deleteRow(id) {
         if(!confirm("¿Borrar respuesta?")) return;
