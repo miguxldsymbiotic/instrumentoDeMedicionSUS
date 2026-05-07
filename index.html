@@ -154,38 +154,49 @@
             <h2 style="color: #fbbf24;">Panel Admin <span style="font-size: 0.7rem; background: #fbbf24; color: #000; padding: 2px 6px; border-radius: 4px; margin-left: 10px;">V2 - DETALLES ACTIVOS</span></h2>
             <button class="admin-login-btn" onclick="showSurvey()" style="background: rgba(255,255,255,0.1);">Vista Usuario</button>
         </div>
-        <div class="stats-grid">
-            <div class="stat-card"><span class="stat-value" id="avg-score">0.0</span><span class="stat-label">Promedio</span></div>
-            <div class="stat-card"><span class="stat-value" id="total-resp">0</span><span class="stat-label">Total</span></div>
-            <div class="stat-card"><span class="stat-value" id="max-score">0</span><span class="stat-label">Máximo</span></div>
+
+        <div class="stats-grid" style="margin-bottom: 2rem;">
+            <div class="stat-card" style="background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(14, 165, 233, 0.05)); border: 1px solid rgba(14, 165, 233, 0.2);">
+                <span class="stat-value" id="avg-score" style="color: #0ea5e9;">0.0</span>
+                <span class="stat-label">Promedio SUS</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="total-resp">0</span>
+                <span class="stat-label">Encuestas</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="max-score" style="color: #22c55e;">0</span>
+                <span class="stat-label">Máximo</span>
+            </div>
         </div>
-        <!-- TABLA DE RESULTADOS (MOVIDA ARRIBA PARA VISIBILIDAD TOTAL) -->
+        <!-- TABLA DE RESULTADOS (DISEÑO LIMPIO Y PROFESIONAL) -->
         <div style="margin-bottom: 2rem;">
-            <h3 style="font-size: 0.9rem; color: #7dd3fc; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 1px;">📋 Resultados Individuales 1x1</h3>
-            <div style="overflow-x: auto; background: rgba(15, 23, 42, 0.8); border-radius: 1rem; border: 2px solid #334155; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);">
-                <table style="min-width: 1000px; border-collapse: collapse; width: 100%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px;">📋 Resultados de Encuestas</h3>
+                <button class="view-btn" onclick="exportToCSV()" style="margin: 0; background: #0369a1; border-color: #0369a1; color: white; font-size: 0.7rem;">Descargar CSV</button>
+            </div>
+            
+            <div style="overflow-x: auto; background: rgba(30, 41, 59, 0.3); border-radius: 1rem; border: 1px solid var(--border); backdrop-filter: blur(10px);">
+                <table style="width: 100%; border-collapse: collapse; min-width: 800px;">
                     <thead>
-                        <tr style="background: rgba(30, 41, 59, 0.9);">
-                            <th style="padding: 15px; text-align: left; color: #94a3b8; font-size: 0.75rem;">FECHA</th>
-                            <th style="padding: 15px; text-align: left; color: #94a3b8; font-size: 0.75rem;">SCORE</th>
-                            <th style="padding: 15px; text-align: left; color: #94a3b8; font-size: 0.75rem;">GRADO</th>
-                            ${[1,2,3,4,5,6,7,8,9,10].map(i => `<th style="padding: 15px; text-align: center; color: #7dd3fc; font-size: 0.7rem; border-left: 1px solid rgba(255,255,255,0.05);">Q${i}</th>`).join('')}
-                            <th style="padding: 15px; text-align: right; color: #94a3b8; font-size: 0.75rem;">ACCIÓN</th>
+                        <tr style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02);">
+                            <th style="padding: 1rem; text-align: left; font-size: 0.7rem; color: var(--text-muted);">FECHA</th>
+                            <th style="padding: 1rem; text-align: left; font-size: 0.7rem; color: var(--text-muted);">PUNTAJE (SUS)</th>
+                            <th style="padding: 1rem; text-align: left; font-size: 0.7rem; color: var(--text-muted);">INTERPRETACIÓN</th>
+                            <th style="padding: 1rem; text-align: center; font-size: 0.7rem; color: var(--text-muted);">RESPUESTAS (1-10)</th>
+                            <th style="padding: 1rem; text-align: right; font-size: 0.7rem; color: var(--text-muted);">DETALLES</th>
                         </tr>
                     </thead>
                     <tbody id="admin-table">
-                        <!-- Las filas se insertan aquí -->
+                        <!-- Se puebla vía JS -->
                     </tbody>
                 </table>
             </div>
         </div>
 
         <div style="background: var(--glass); padding: 1.2rem; border-radius: 1rem; margin-bottom: 1.5rem; border: 1px solid var(--border);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h3 style="font-size: 0.9rem; color: var(--text-muted);">Distribución de Resultados</h3>
-                <button class="view-btn" onclick="exportToCSV()" style="margin: 0; background: #0369a1; border-color: #0369a1; color: white;">Descargar CSV</button>
-            </div>
-            <canvas id="mainChart" style="max-height: 200px;"></canvas>
+            <h3 style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 1px;">Resumen Visual</h3>
+            <canvas id="mainChart" style="max-height: 180px;"></canvas>
         </div>
     </div>
 </main>
@@ -332,10 +343,10 @@
                 if(r.final_score > max) max = r.final_score; 
                 if(r.interpretation) counts[r.interpretation]++;
                 
-                let qCells = '';
+                let qDots = '';
                 for(let i=1; i<=10; i++) {
                     const val = r['q'+i] !== undefined ? r['q'+i] : (r['Q'+i] || '-');
-                    let color = '#94a3b8';
+                    let color = '#334155';
                     if(val !== '-') {
                         const isPositive = i % 2 !== 0;
                         if(isPositive) {
@@ -344,17 +355,17 @@
                             color = val <= 2 ? '#22c55e' : (val >= 4 ? '#ef4444' : '#f59e0b');
                         }
                     }
-                    qCells += `<td style="text-align:center; font-weight:700; border-left: 1px solid rgba(255,255,255,0.05); color: ${color}; padding: 10px;">${val}</td>`;
+                    qDots += `<span style="width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; background: ${color}; border-radius: 4px; font-size: 0.6rem; font-weight: 800; color: white; margin: 0 1px;" title="Q${i}: ${val}">${val}</span>`;
                 }
 
                 table.innerHTML += `
-                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.01);">
-                    <td style="padding: 12px; font-size: 0.7rem; color: #94a3b8;">${new Date(r.created_at).toLocaleDateString()}</td>
-                    <td style="padding: 12px;"><strong style="color:#7dd3fc;">${r.final_score}</strong></td>
-                    <td style="padding: 12px;"><span class="badge badge-${(r.interpretation || 'Bueno').toLowerCase().replace(' ', '')}">${r.interpretation || 'N/A'}</span></td>
-                    ${qCells}
-                    <td style="padding: 12px; text-align: right;">
-                        <button class="view-btn" onclick="showDetails('${r.id}')" style="padding: 4px 8px; font-size: 0.6rem;">Ver</button>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                    <td style="padding: 1rem; font-size: 0.75rem; color: var(--text-muted);">${new Date(r.created_at).toLocaleDateString()}</td>
+                    <td style="padding: 1rem;"><strong style="color:#0ea5e9; font-size: 1.1rem;">${r.final_score}</strong></td>
+                    <td style="padding: 1rem;"><span class="badge badge-${(r.interpretation || 'Bueno').toLowerCase().replace(' ', '')}" style="font-size: 0.6rem;">${r.interpretation || 'N/A'}</span></td>
+                    <td style="padding: 1rem; text-align: center; white-space: nowrap;">${qDots}</td>
+                    <td style="padding: 1rem; text-align: right;">
+                        <button class="view-btn" onclick="showDetails('${r.id}')" style="background: var(--primary); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; cursor: pointer;">Ver Respuestas</button>
                     </td>
                 </tr>`;
             } catch(e) { console.error("Error al renderizar fila:", e); }
