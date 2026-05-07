@@ -159,31 +159,33 @@
             <div class="stat-card"><span class="stat-value" id="total-resp">0</span><span class="stat-label">Total</span></div>
             <div class="stat-card"><span class="stat-value" id="max-score">0</span><span class="stat-label">Máximo</span></div>
         </div>
+        <!-- TABLA DE RESULTADOS (MOVIDA ARRIBA PARA VISIBILIDAD TOTAL) -->
+        <div style="margin-bottom: 2rem;">
+            <h3 style="font-size: 0.9rem; color: #7dd3fc; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 1px;">📋 Resultados Individuales 1x1</h3>
+            <div style="overflow-x: auto; background: rgba(15, 23, 42, 0.8); border-radius: 1rem; border: 2px solid #334155; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);">
+                <table style="min-width: 1000px; border-collapse: collapse; width: 100%;">
+                    <thead>
+                        <tr style="background: rgba(30, 41, 59, 0.9);">
+                            <th style="padding: 15px; text-align: left; color: #94a3b8; font-size: 0.75rem;">FECHA</th>
+                            <th style="padding: 15px; text-align: left; color: #94a3b8; font-size: 0.75rem;">SCORE</th>
+                            <th style="padding: 15px; text-align: left; color: #94a3b8; font-size: 0.75rem;">GRADO</th>
+                            ${[1,2,3,4,5,6,7,8,9,10].map(i => `<th style="padding: 15px; text-align: center; color: #7dd3fc; font-size: 0.7rem; border-left: 1px solid rgba(255,255,255,0.05);">Q${i}</th>`).join('')}
+                            <th style="padding: 15px; text-align: right; color: #94a3b8; font-size: 0.75rem;">ACCIÓN</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-table">
+                        <!-- Las filas se insertan aquí -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <div style="background: var(--glass); padding: 1.2rem; border-radius: 1rem; margin-bottom: 1.5rem; border: 1px solid var(--border);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                 <h3 style="font-size: 0.9rem; color: var(--text-muted);">Distribución de Resultados</h3>
                 <button class="view-btn" onclick="exportToCSV()" style="margin: 0; background: #0369a1; border-color: #0369a1; color: white;">Descargar CSV</button>
             </div>
             <canvas id="mainChart" style="max-height: 200px;"></canvas>
-        </div>
-        <div style="overflow-x: auto; background: var(--card-bg); border-radius: 1rem; border: 1px solid var(--border); padding: 1px;">
-            <table style="min-width: 1100px; border-spacing: 0; border-collapse: separate;">
-                <thead>
-                    <tr>
-                        <th style="background: rgba(255,255,255,0.05); padding: 12px;">Fecha</th>
-                        <th style="background: rgba(255,255,255,0.05); padding: 12px;">Score</th>
-                        <th style="background: rgba(255,255,255,0.05); padding: 12px;">Grado</th>
-                        <th colspan="10" style="background: rgba(14, 165, 233, 0.1); text-align: center; color: #7dd3fc; border-left: 1px solid var(--border); border-right: 1px solid var(--border);">Respuestas Individuales (Q1 - Q10)</th>
-                        <th style="background: rgba(255,255,255,0.05); padding: 12px;">Acción</th>
-                    </tr>
-                    <tr style="font-size: 0.7rem; background: rgba(0,0,0,0.2);">
-                        <th colspan="3"></th>
-                        ${[1,2,3,4,5,6,7,8,9,10].map(i => `<th style="width: 40px; text-align: center; border-bottom: 1px solid var(--border);">${i}</th>`).join('')}
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody id="admin-table"></tbody>
-            </table>
         </div>
     </div>
 </main>
@@ -325,36 +327,37 @@
 
         let sum = 0, max = 0; const counts = {Excelente:0, "Muy bueno":0, Bueno:0, Marginal:0, Inaceptable:0};
         data.forEach(r => {
-            sum += r.final_score; if(r.final_score > max) max = r.final_score; counts[r.interpretation]++;
-            
-            let qCells = '';
-            for(let i=1; i<=10; i++) {
-                const val = r['q'+i] !== undefined ? r['q'+i] : (r['Q'+i] || '-');
-                let color = '#94a3b8'; // Neutral
-                if(val !== '-') {
-                    // Lógica SUS: preguntas impares (positivas), pares (negativas)
-                    const isPositive = i % 2 !== 0;
-                    if(isPositive) {
-                        color = val >= 4 ? '#22c55e' : (val <= 2 ? '#ef4444' : '#f59e0b');
-                    } else {
-                        color = val <= 2 ? '#22c55e' : (val >= 4 ? '#ef4444' : '#f59e0b');
+            try {
+                sum += (r.final_score || 0); 
+                if(r.final_score > max) max = r.final_score; 
+                if(r.interpretation) counts[r.interpretation]++;
+                
+                let qCells = '';
+                for(let i=1; i<=10; i++) {
+                    const val = r['q'+i] !== undefined ? r['q'+i] : (r['Q'+i] || '-');
+                    let color = '#94a3b8';
+                    if(val !== '-') {
+                        const isPositive = i % 2 !== 0;
+                        if(isPositive) {
+                            color = val >= 4 ? '#22c55e' : (val <= 2 ? '#ef4444' : '#f59e0b');
+                        } else {
+                            color = val <= 2 ? '#22c55e' : (val >= 4 ? '#ef4444' : '#f59e0b');
+                        }
                     }
+                    qCells += `<td style="text-align:center; font-weight:700; border-left: 1px solid rgba(255,255,255,0.05); color: ${color}; padding: 10px;">${val}</td>`;
                 }
-                qCells += `<td style="text-align:center; font-weight:700; border-left: 1px solid rgba(255,255,255,0.03); color: ${color};">${val}</td>`;
-            }
 
-            table.innerHTML += `<tr>
-                <td style="white-space: nowrap; font-size: 0.75rem;">${new Date(r.created_at).toLocaleDateString()}</td>
-                <td><strong style="color:#7dd3fc; font-size: 1rem;">${r.final_score}</strong></td>
-                <td><span class="badge badge-${r.interpretation.toLowerCase().replace(' ', '')}">${r.interpretation}</span></td>
-                ${qCells}
-                <td style="border-left: 1px solid rgba(255,255,255,0.03);">
-                    <div style="display: flex; gap: 4px;">
-                        <button class="view-btn" onclick="showDetails('${r.id}')" style="padding: 4px 8px; margin:0; font-size: 0.7rem;">Ver</button>
-                        <button class="delete-btn" onclick="deleteRow('${r.id}')" style="padding: 4px 8px; font-size: 0.7rem;">×</button>
-                    </div>
-                </td>
-            </tr>`;
+                table.innerHTML += `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.01);">
+                    <td style="padding: 12px; font-size: 0.7rem; color: #94a3b8;">${new Date(r.created_at).toLocaleDateString()}</td>
+                    <td style="padding: 12px;"><strong style="color:#7dd3fc;">${r.final_score}</strong></td>
+                    <td style="padding: 12px;"><span class="badge badge-${(r.interpretation || 'Bueno').toLowerCase().replace(' ', '')}">${r.interpretation || 'N/A'}</span></td>
+                    ${qCells}
+                    <td style="padding: 12px; text-align: right;">
+                        <button class="view-btn" onclick="showDetails('${r.id}')" style="padding: 4px 8px; font-size: 0.6rem;">Ver</button>
+                    </td>
+                </tr>`;
+            } catch(e) { console.error("Error al renderizar fila:", e); }
         });
         document.getElementById('avg-score').innerText = data.length ? (sum/data.length).toFixed(1) : '0.0';
         document.getElementById('total-resp').innerText = data.length; document.getElementById('max-score').innerText = max;
