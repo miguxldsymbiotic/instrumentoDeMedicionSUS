@@ -166,16 +166,20 @@
             </div>
             <canvas id="mainChart" style="max-height: 200px;"></canvas>
         </div>
-        <div style="overflow-x: auto; background: var(--glass); border-radius: 0.8rem; border: 1px solid var(--border);">
-            <table style="min-width: 1000px;">
+        <div style="overflow-x: auto; background: var(--card-bg); border-radius: 1rem; border: 1px solid var(--border); padding: 1px;">
+            <table style="min-width: 1100px; border-spacing: 0; border-collapse: separate;">
                 <thead>
                     <tr>
-                        <th>Fecha</th>
-                        <th>Score</th>
-                        <th>Grado</th>
-                        <th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>Q5</th>
-                        <th>Q6</th><th>Q7</th><th>Q8</th><th>Q9</th><th>Q10</th>
-                        <th>Acción</th>
+                        <th style="background: rgba(255,255,255,0.05); padding: 12px;">Fecha</th>
+                        <th style="background: rgba(255,255,255,0.05); padding: 12px;">Score</th>
+                        <th style="background: rgba(255,255,255,0.05); padding: 12px;">Grado</th>
+                        <th colspan="10" style="background: rgba(14, 165, 233, 0.1); text-align: center; color: #7dd3fc; border-left: 1px solid var(--border); border-right: 1px solid var(--border);">Respuestas Individuales (Q1 - Q10)</th>
+                        <th style="background: rgba(255,255,255,0.05); padding: 12px;">Acción</th>
+                    </tr>
+                    <tr style="font-size: 0.7rem; background: rgba(0,0,0,0.2);">
+                        <th colspan="3"></th>
+                        ${[1,2,3,4,5,6,7,8,9,10].map(i => `<th style="width: 40px; text-align: center; border-bottom: 1px solid var(--border);">${i}</th>`).join('')}
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody id="admin-table"></tbody>
@@ -325,22 +329,29 @@
             
             let qCells = '';
             for(let i=1; i<=10; i++) {
-                // Buscar q1 o Q1 para evitar problemas de mayúsculas
-                const val = r['q'+i] !== undefined ? r['q'+i] : r['Q'+i];
-                qCells += `<td style="text-align:center; font-weight:bold; color:${val > 3 ? '#22c55e' : (val < 3 ? '#ef4444' : '#f59e0b')}">${val || '-'}</td>`;
+                const val = r['q'+i] !== undefined ? r['q'+i] : (r['Q'+i] || '-');
+                let color = '#94a3b8'; // Neutral
+                if(val !== '-') {
+                    // Lógica SUS: preguntas impares (positivas), pares (negativas)
+                    const isPositive = i % 2 !== 0;
+                    if(isPositive) {
+                        color = val >= 4 ? '#22c55e' : (val <= 2 ? '#ef4444' : '#f59e0b');
+                    } else {
+                        color = val <= 2 ? '#22c55e' : (val >= 4 ? '#ef4444' : '#f59e0b');
+                    }
+                }
+                qCells += `<td style="text-align:center; font-weight:700; border-left: 1px solid rgba(255,255,255,0.03); color: ${color};">${val}</td>`;
             }
 
-            const rawData = JSON.stringify(r).replace(/"/g, '&quot;');
-
-            table.innerHTML += `<tr title="Datos crudos: ${rawData}">
-                <td>${new Date(r.created_at).toLocaleDateString()}</td>
-                <td><strong style="color:#7dd3fc;">${r.final_score}</strong></td>
+            table.innerHTML += `<tr>
+                <td style="white-space: nowrap; font-size: 0.75rem;">${new Date(r.created_at).toLocaleDateString()}</td>
+                <td><strong style="color:#7dd3fc; font-size: 1rem;">${r.final_score}</strong></td>
                 <td><span class="badge badge-${r.interpretation.toLowerCase().replace(' ', '')}">${r.interpretation}</span></td>
                 ${qCells}
-                <td>
+                <td style="border-left: 1px solid rgba(255,255,255,0.03);">
                     <div style="display: flex; gap: 4px;">
-                        <button class="view-btn" onclick="showDetails('${r.id}')" style="padding: 4px 8px; margin:0;">Ver</button>
-                        <button class="delete-btn" onclick="deleteRow('${r.id}')" style="padding: 4px 8px;">×</button>
+                        <button class="view-btn" onclick="showDetails('${r.id}')" style="padding: 4px 8px; margin:0; font-size: 0.7rem;">Ver</button>
+                        <button class="delete-btn" onclick="deleteRow('${r.id}')" style="padding: 4px 8px; font-size: 0.7rem;">×</button>
                     </div>
                 </td>
             </tr>`;
