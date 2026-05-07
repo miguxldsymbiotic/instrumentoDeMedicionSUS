@@ -28,9 +28,18 @@ CREATE POLICY "Permitir inserciones públicas"
 ON sus_responses FOR INSERT 
 WITH CHECK (true);
 
--- Política para que solo el admin pueda leer los datos
--- Nota: Esto asume que el admin se loguea en Supabase.
--- Si prefieres algo más simple por ahora, puedes habilitar lectura pública o usar service_role.
-CREATE POLICY "Permitir lectura solo a autenticados" 
+-- Política para permitir lectura (pública para que funcione el invitado)
+CREATE POLICY "Permitir lectura pública" 
 ON sus_responses FOR SELECT 
-USING (auth.role() = 'authenticated');
+USING (true);
+
+-- Política para permitir borrado (público para que el invitado pueda gestionar)
+CREATE POLICY "Permitir borrado público" 
+ON sus_responses FOR DELETE 
+USING (true);
+
+-- Otorgar permisos a los roles de Supabase (CRUCIAL para que el invitado vea datos)
+GRANT SELECT, INSERT, DELETE ON sus_responses TO anon;
+GRANT SELECT, INSERT, DELETE ON sus_responses TO authenticated;
+GRANT USAGE ON SCHEMA public TO anon;
+GRANT USAGE ON SCHEMA public TO authenticated;

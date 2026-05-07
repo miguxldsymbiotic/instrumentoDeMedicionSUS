@@ -160,12 +160,27 @@
             <div class="stat-card"><span class="stat-value" id="max-score">0</span><span class="stat-label">Máximo</span></div>
         </div>
         <div style="background: var(--glass); padding: 1.2rem; border-radius: 1rem; margin-bottom: 1.5rem; border: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="font-size: 0.9rem; color: var(--text-muted);">Distribución de Resultados</h3>
+                <button class="view-btn" onclick="exportToCSV()" style="margin: 0; background: #0369a1; border-color: #0369a1; color: white;">Descargar CSV</button>
+            </div>
             <canvas id="mainChart" style="max-height: 200px;"></canvas>
         </div>
-        <table>
-            <thead><tr><th>Fecha</th><th>Score</th><th>Grado</th><th>Acción</th></tr></thead>
-            <tbody id="admin-table"></tbody>
-        </table>
+        <div style="overflow-x: auto; background: var(--glass); border-radius: 0.8rem; border: 1px solid var(--border);">
+            <table style="min-width: 1000px;">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Score</th>
+                        <th>Grado</th>
+                        <th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>Q5</th>
+                        <th>Q6</th><th>Q7</th><th>Q8</th><th>Q9</th><th>Q10</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="admin-table"></tbody>
+            </table>
+        </div>
     </div>
 </main>
 
@@ -265,6 +280,7 @@
     async function handleLogin() {
         const u = document.getElementById('email').value; const p = document.getElementById('pass').value;
         if(u === 'user' && p === 'user') {
+            sessionStorage.setItem('admin_guest', 'true');
             closeLoginModal(); document.getElementById('login-btn').style.display = 'none'; document.getElementById('logout-btn').style.display = 'block';
             showView('admin-view'); loadAdminData(); notify("Entrando como invitado..."); return;
         }
@@ -272,7 +288,13 @@
         if(error) notify("Acceso denegado", "error"); else { closeLoginModal(); checkAuth(); notify("Acceso concedido"); }
     }
 
-    async function logout() { await sb.auth.signOut(); document.getElementById('login-btn').style.display = 'block'; document.getElementById('logout-btn').style.display = 'none'; showSurvey(); }
+    async function logout() { 
+        await sb.auth.signOut(); 
+        sessionStorage.removeItem('admin_guest');
+        document.getElementById('login-btn').style.display = 'block'; 
+        document.getElementById('logout-btn').style.display = 'none'; 
+        showSurvey(); 
+    }
 
     let allResponses = [];
     async function loadAdminData() {
@@ -283,13 +305,22 @@
         let sum = 0, max = 0; const counts = {Excelente:0, "Muy bueno":0, Bueno:0, Marginal:0, Inaceptable:0};
         data.forEach(r => {
             sum += r.final_score; if(r.final_score > max) max = r.final_score; counts[r.interpretation]++;
+            
+            let qCells = '';
+            for(let i=1; i<=10; i++) {
+                qCells += `<td style="text-align:center; opacity:0.8;">${r['q'+i]}</td>`;
+            }
+
             table.innerHTML += `<tr>
                 <td>${new Date(r.created_at).toLocaleDateString()}</td>
-                <td><strong>${r.final_score}</strong></td>
+                <td><strong style="color:#7dd3fc;">${r.final_score}</strong></td>
                 <td><span class="badge badge-${r.interpretation.toLowerCase().replace(' ', '')}">${r.interpretation}</span></td>
+                ${qCells}
                 <td>
-                    <button class="view-btn" onclick="showDetails('${r.id}')">Ver</button>
-                    <button class="delete-btn" onclick="deleteRow('${r.id}')">Borrar</button>
+                    <div style="display: flex; gap: 4px;">
+                        <button class="view-btn" onclick="showDetails('${r.id}')" style="padding: 4px 8px; margin:0;">Ver</button>
+                        <button class="delete-btn" onclick="deleteRow('${r.id}')" style="padding: 4px 8px;">×</button>
+                    </div>
                 </td>
             </tr>`;
         });
@@ -303,16 +334,22 @@
         if(!res) return;
         
         const meta = document.getElementById('details-meta');
-        meta.innerHTML = `Fecha: ${new Date(res.created_at).toLocaleString()}<br>Score: <strong>${res.final_score}</strong> (${res.interpretation})`;
+        meta.innerHTML = `Fecha: <strong>${new Date(res.created_at).toLocaleString()}</strong><br>Puntaje Final: <span style="color:#0ea5e9; font-size:1.2rem; font-weight:800;">${res.final_score}</span> (${res.interpretation})`;
         
         const list = document.getElementById('details-list');
         list.innerHTML = '';
         questions.forEach((q, i) => {
             const val = res['q' + (i+1)];
+            const pct = ((val - 1) / 4) * 100;
             list.innerHTML += `
-                <div class="details-item">
-                    <span class="details-q-text">${i+1}. ${q}</span>
-                    <span class="details-q-val">${val}</span>
+                <div class="details-item" style="flex-direction: column; align-items: flex-start; gap: 0.5rem;">
+                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                        <span class="details-q-text">${i+1}. ${q}</span>
+                        <span class="details-q-val">${val}</span>
+                    </div>
+                    <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden;">
+                        <div style="width: ${pct}%; height: 100%; background: var(--primary); box-shadow: 0 0 10px var(--primary);"></div>
+                    </div>
                 </div>
             `;
         });
@@ -328,6 +365,25 @@
         if(error) notify("Error al borrar", "error"); else { notify("Respuesta eliminada"); loadAdminData(); }
     }
 
+    function exportToCSV() {
+        if(!allResponses.length) return notify("No hay datos para exportar", "error");
+        
+        let csv = "ID,Fecha,Score,Interpretacion,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10\n";
+        allResponses.forEach(r => {
+            csv += `${r.id},${new Date(r.created_at).toLocaleString()},${r.final_score},${r.interpretation},${r.q1},${r.q2},${r.q3},${r.q4},${r.q5},${r.q6},${r.q7},${r.q8},${r.q9},${r.q10}\n`;
+        });
+        
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.setAttribute('hidden', '');
+        a.setAttribute('href', url);
+        a.setAttribute('download', `sus_responses_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
     let chart = null;
     function renderChart(c) {
         const ctx = document.getElementById('mainChart').getContext('2d');
@@ -338,7 +394,16 @@
             options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } } } }
         });
     }
-    async function checkAuth() { const { data: { session } } = await sb.auth.getSession(); if(session) { document.getElementById('login-btn').style.display = 'none'; document.getElementById('logout-btn').style.display = 'block'; showView('admin-view'); loadAdminData(); } }
+    async function checkAuth() { 
+        const { data: { session } } = await sb.auth.getSession(); 
+        const isGuest = sessionStorage.getItem('admin_guest');
+        if(session || isGuest === 'true') { 
+            document.getElementById('login-btn').style.display = 'none'; 
+            document.getElementById('logout-btn').style.display = 'block'; 
+            showView('admin-view'); 
+            loadAdminData(); 
+        } 
+    }
     checkAuth();
 </script>
 </body>
