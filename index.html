@@ -298,14 +298,16 @@
 
     let allResponses = [];
     async function loadAdminData() {
+        console.log("Cargando datos de admin...");
         const { data, error } = await sb.from('sus_responses').select('*').order('created_at', {ascending: false});
         
         if(error) { 
             console.error("Error Supabase:", error);
-            alert("Error de Supabase: " + error.message + "\nDetalle: " + (error.details || 'Ninguno') + "\nHint: " + (error.hint || 'Ninguno'));
-            notify("Error al cargar datos: " + error.message, "error"); 
+            alert("Error de Supabase: " + error.message);
             return; 
         }
+
+        console.log("Datos recibidos:", data);
         
         allResponses = data;
         const table = document.getElementById('admin-table'); 
@@ -323,10 +325,14 @@
             
             let qCells = '';
             for(let i=1; i<=10; i++) {
-                qCells += `<td style="text-align:center; opacity:0.8;">${r['q'+i]}</td>`;
+                // Buscar q1 o Q1 para evitar problemas de mayúsculas
+                const val = r['q'+i] !== undefined ? r['q'+i] : r['Q'+i];
+                qCells += `<td style="text-align:center; font-weight:bold; color:${val > 3 ? '#22c55e' : (val < 3 ? '#ef4444' : '#f59e0b')}">${val || '-'}</td>`;
             }
 
-            table.innerHTML += `<tr>
+            const rawData = JSON.stringify(r).replace(/"/g, '&quot;');
+
+            table.innerHTML += `<tr title="Datos crudos: ${rawData}">
                 <td>${new Date(r.created_at).toLocaleDateString()}</td>
                 <td><strong style="color:#7dd3fc;">${r.final_score}</strong></td>
                 <td><span class="badge badge-${r.interpretation.toLowerCase().replace(' ', '')}">${r.interpretation}</span></td>
