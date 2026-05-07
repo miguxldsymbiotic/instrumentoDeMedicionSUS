@@ -217,9 +217,18 @@
         if(!sb || SUPABASE_URL === 'TU_SUPABASE_URL') { alert(`Prueba: ${score} (${interp}). Conecta Supabase para guardar.`); showView('success-view'); return; }
         try {
             document.getElementById('submit-btn').disabled = true;
-            await sb.from('sus_responses').insert([{...data, final_score: score, interpretation: interp}]);
+            const { data: insertData, error: insertError } = await sb.from('sus_responses').insert([{...data, final_score: score, interpretation: interp}]);
+            
+            if(insertError) {
+                alert("❌ ERROR AL GUARDAR: " + insertError.message);
+                console.error(insertError);
+                return;
+            }
+            
             showView('success-view');
-        } catch(err) { alert(err.message); }
+        } catch(err) { 
+            alert("❌ ERROR CRÍTICO: " + err.message); 
+        }
         finally { document.getElementById('submit-btn').disabled = false; }
     };
 
@@ -259,7 +268,12 @@
 
     async function loadAdminData() {
         const { data, error } = await sb.from('sus_responses').select('*').order('created_at', {ascending: false});
-        if(error) return;
+        
+        if(error) {
+            alert("❌ ERROR AL CARGAR DATOS: " + error.message);
+            console.error(error);
+            return;
+        }
         const table = document.getElementById('admin-table'); table.innerHTML = '';
         let sum = 0, max = 0;
         const counts = {Excelente:0, "Muy bueno":0, Bueno:0, Marginal:0, Inaceptable:0};
