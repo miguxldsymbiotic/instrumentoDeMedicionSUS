@@ -299,9 +299,24 @@
     let allResponses = [];
     async function loadAdminData() {
         const { data, error } = await sb.from('sus_responses').select('*').order('created_at', {ascending: false});
-        if(error) { notify("Error al cargar datos", "error"); return; }
+        
+        if(error) { 
+            console.error("Error Supabase:", error);
+            alert("Error de Supabase: " + error.message + "\nDetalle: " + (error.details || 'Ninguno') + "\nHint: " + (error.hint || 'Ninguno'));
+            notify("Error al cargar datos: " + error.message, "error"); 
+            return; 
+        }
+        
         allResponses = data;
-        const table = document.getElementById('admin-table'); table.innerHTML = '';
+        const table = document.getElementById('admin-table'); 
+        table.innerHTML = '';
+        
+        if(!data || data.length === 0) {
+            table.innerHTML = '<tr><td colspan="15" style="text-align:center; padding:2rem; color:var(--text-muted);">No hay respuestas registradas en la base de datos.</td></tr>';
+            notify("Conexión OK, pero la tabla está vacía", "info");
+            return;
+        }
+
         let sum = 0, max = 0; const counts = {Excelente:0, "Muy bueno":0, Bueno:0, Marginal:0, Inaceptable:0};
         data.forEach(r => {
             sum += r.final_score; if(r.final_score > max) max = r.final_score; counts[r.interpretation]++;
